@@ -2,81 +2,73 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score, roc_curve, auc
-from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import f1_score, roc_curve, auc, accuracy_score, roc_auc_score
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import label_binarize
 
-# ----- LOAD THE DATA -----
+# Load Iris dataset
 iris = load_iris()
-# Use all four features (sepal length, sepal width, petal length, petal width)
 X = iris.data
-# Binary classification for 'virginica' species
-y = (iris.target == 2).astype(int)
+y = iris.target
 
-# ----- SPLIT THE DATA -----
-xTrain, xTest, yTrain, yTest = train_test_split(X, y, test_size=0.3, random_state=42)
+# Binarize the output labels for multiclass ROC curve
+y_bin = label_binarize(y, classes=[0, 1, 2])
 
-# ----- MODEL INSTANTIATION -----
-# Naive Bayes Classifier
-nb_model = GaussianNB()
-# Logistic Regression Classifier
-logreg_model = LogisticRegression()
-# Linear Discriminant Analysis
-lda_model = LinearDiscriminantAnalysis()
+# classifiers
+lda = LinearDiscriminantAnalysis()
+logreg = LogisticRegression(max_iter=1000, random_state=42)
+nb = GaussianNB()
 
-# ----- TRAINING -----
-nb_model.fit(xTrain, yTrain)
-logreg_model.fit(xTrain, yTrain)
-lda_model.fit(xTrain, yTrain)
+# Train classifiers
+lda.fit(X, y)
+logreg.fit(X, y)
+nb.fit(X, y)
 
-# ----- PREDICTION -----
-yPred_nb = nb_model.predict(xTest)
-yPred_logreg = logreg_model.predict(xTest)
-yPred_lda = lda_model.predict(xTest)
+# Predict for all classifiers
+y_pred_lda = lda.predict(X)
+y_pred_logreg = logreg.predict(X)
+y_pred_nb = nb.predict(X)
 
-# ----- PROBABILITY PREDICTIONS FOR ROC CURVE -----
-yProba_nb = nb_model.predict_proba(xTest)[:, 1]
-yProba_logreg = logreg_model.predict_proba(xTest)[:, 1]
-yProba_lda = lda_model.predict_proba(xTest)[:, 1]
+# Probabilities for ROC curve
+y_probs_lda = lda.predict_proba(X)
+y_probs_logreg = logreg.predict_proba(X)
+y_probs_nb = nb.predict_proba(X)
 
-# ----- PERFORMANCE METRICS -----
-# Accuracy
-accuracy_nb = accuracy_score(yTest, yPred_nb)
-accuracy_logreg = accuracy_score(yTest, yPred_logreg)
-accuracy_lda = accuracy_score(yTest, yPred_lda)
+# F1 Scores and Accuracy
+f1_lda = f1_score(y, y_pred_lda, average='weighted')
+f1_logreg = f1_score(y, y_pred_logreg, average='weighted')
+f1_nb = f1_score(y, y_pred_nb, average='weighted')
 
-# F1 Score
-f1_nb = f1_score(yTest, yPred_nb)
-f1_logreg = f1_score(yTest, yPred_logreg)
-f1_lda = f1_score(yTest, yPred_lda)
+acc_lda = accuracy_score(y, y_pred_lda)
+acc_logreg = accuracy_score(y, y_pred_logreg)
+acc_nb = accuracy_score(y, y_pred_nb)
 
-# ----- ROC CURVE -----
-# Compute ROC curve and AUC for each model
-fpr_nb, tpr_nb, _ = roc_curve(yTest, yProba_nb)
-fpr_logreg, tpr_logreg, _ = roc_curve(yTest, yProba_logreg)
-fpr_lda, tpr_lda, _ = roc_curve(yTest, yProba_lda)
+print(f"LDA F1 Score: {f1_lda:.2f}, Accuracy: {acc_lda:.2f}")
+print(f"Logistic Regression F1 Score: {f1_logreg:.2f}, Accuracy: {acc_logreg:.2f}")
+print(f"Naive Bayes F1 Score: {f1_nb:.2f}, Accuracy: {acc_nb:.2f}")
 
-auc_nb = auc(fpr_nb, tpr_nb)
-auc_logreg = auc(fpr_logreg, tpr_logreg)
-auc_lda = auc(fpr_lda, tpr_lda)
+# ROC curves
+fpr_lda, tpr_lda, _ = roc_curve(y_bin.ravel(), y_probs_lda.ravel())
+fpr_logreg, tpr_logreg, _ = roc_curve(y_bin.ravel(), y_probs_logreg.ravel())
+fpr_nb, tpr_nb, _ = roc_curve(y_bin.ravel(), y_probs_nb.ravel())
 
-# ----- DISPLAY PERFORMANCE -----
-print("Naive Bayes Classifier: Accuracy = {:.2f}, F1 Score = {:.2f}, AUC = {:.2f}".format(accuracy_nb, f1_nb, auc_nb))
-print("Logistic Regression: Accuracy = {:.2f}, F1 Score = {:.2f}, AUC = {:.2f}".format(accuracy_logreg, f1_logreg, auc_logreg))
-print("Linear Discriminant Analysis: Accuracy = {:.2f}, F1 Score = {:.2f}, AUC = {:.2f}".format(accuracy_lda, f1_lda, auc_lda))
+# AUC scores
+roc_auc_lda = auc(fpr_lda, tpr_lda)
+roc_auc_logreg = auc(fpr_logreg, tpr_logreg)
+roc_auc_nb = auc(fpr_nb, tpr_nb)
 
-# ----- PLOT ROC CURVES -----
-plt.figure()
-plt.plot(fpr_nb, tpr_nb, label='Naive Bayes (AUC = %0.2f)' % auc_nb, color='blue')
-plt.plot(fpr_logreg, tpr_logreg, label='Logistic Regression (AUC = %0.2f)' % auc_logreg, color='green')
-plt.plot(fpr_lda, tpr_lda, label='LDA (AUC = %0.2f)' % auc_lda, color='purple')
-plt.plot([0, 1], [0, 1], color='red', linestyle='--')
+# Plot ROC Curves
+plt.figure(figsize=(8, 6))
+plt.plot(fpr_lda, tpr_lda, label=f'LDA (AUC = {roc_auc_lda:.2f})', color='blue')
+plt.plot(fpr_logreg, tpr_logreg, label=f'Logistic Regression (AUC = {roc_auc_logreg:.2f})', color='green')
+plt.plot(fpr_nb, tpr_nb, label=f'Naive Bayes (AUC = {roc_auc_nb:.2f})', color='red')
+plt.plot([0, 1], [0, 1], 'k--', label='Random Guess')
 
-# Labels and Legend
+# Add labels and title
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
-plt.title('ROC Curve Comparison')
+plt.title('ROC Curves for LDA, Logistic Regression, and Naive Bayes')
 plt.legend(loc='lower right')
-plt.grid()
 plt.show()
