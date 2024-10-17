@@ -7,7 +7,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 # Load the diabetes dataset I used the dataset from wechat not from the sktlearn. 
 data = pd.read_csv('diabetes.csv')
 
-# Separate features and labels
 X = data.drop('Outcome', axis=1)  
 y = data['Outcome']
 
