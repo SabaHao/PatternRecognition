@@ -1,59 +1,55 @@
+# --- STEP 1 ---
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.datasets import load_iris
+from sklearn import datasets
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, roc_curve, auc
+from sklearn.metrics import accuracy_score
+# --- STEP 1 --- 
 
-# ----- LOAD THE DATA -----
-iris = load_iris()
-# Select the sepal length from the dataset
-xAxis = iris.data[:, 0]
-# Classify whether species is 'virginica'
-y = (iris.target == 2).astype(int)
 
-# ---- CLASSIFICATION -----
-# Define a sample threshold for classification
-threshold = 5
-yPred = (xAxis > threshold).astype(int)
+# --- STEP 2 ---
+from sklearn.metrics import roc_curve
+# --- STEP 2 ---
 
-# Split the dataset into TRAIN and TEST
-xTrain, xTest, yTrain, yTest = train_test_split(xAxis, y, test_size=0.3, random_state=42)
 
-# ----- ACCURACY CALCULATION -----
-accuracy = accuracy_score(yTest, (xTest > threshold).astype(int))
-print(f'Accuracy: {accuracy:.2f}')
+# --- STEP 1 --- 
+# Load Iris dataset
+iris = datasets.load_iris()
+# Select one feature, the sepal's length
+X = iris.data[:, 0] 
+y = (iris.target == 0).astype(int)
 
-# Compute predicted probabilities
-probabilities = xTest
+# Apply threshold to classify data
+threshold = 5.0
+y_pred = (X > threshold).astype(int)
 
-# Vary the threshold to generate different classifications
-thresholds = np.linspace(min(xAxis), max(xAxis), 100)
-tpr = []
-fpr = []
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# ----- TRUE POSITIVE RATE && FALSE POSITIVE RATE
-# Compute TPR and FPR for each threshold
-for i in thresholds:
-    yPred = (probabilities > i).astype(int)
-    tp = np.sum((yPred == 1) & (yTest == 1))
-    fn = np.sum((yPred == 0) & (yTest == 1))
-    fp = np.sum((yPred == 1) & (yTest == 0))
-    tn = np.sum((yPred == 0) & (yTest == 0))
+# Classification based on threshold
+y_train_pred = (X_train > threshold).astype(int)
+y_test_pred = (X_test > threshold).astype(int)
 
-    tpr.append(tp / (tp + fn) if (tp + fn) > 0 else 0)
-    fpr.append(fp / (fp + tn) if (fp + tn) > 0 else 0)
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_test_pred)
+print(f"Accuracy: {accuracy * 100:.2f}%")
+# --- STEP 1 --- 
 
-# ----- PLOT -----
+
+# --- STEP 2 ---
+# Predicted probabilities (just the feature values in this simple case)
+probs = X
+
+# Vary threshold and compute TPR and FPR
+fpr, tpr, thresholds = roc_curve(y, probs)
+
+# Plot ROC curve
 plt.figure()
-plt.plot(fpr, tpr, color='green', label='ROC curve (area = %0.2f)' % auc(fpr, tpr))
-plt.plot([0, 1], [0, 1], color='red', linestyle='--')
-
-# Labels
-plt.xlabel('FALSE POSITIVE RATE')
-plt.ylabel('TRUE POSITIVE RATE')
-plt.title('Receiver Operating Characteristic')
-plt.legend(loc='lower right')
-
-# Show the plot
-plt.grid()
+plt.plot(fpr, tpr, label='ROC curve', color='blue')
+plt.plot([0, 1], [0, 1], 'k--', label='Random guess')  # Diagonal line for reference
+plt.xlabel('False Positive Rate (FPR)')
+plt.ylabel('True Positive Rate (TPR)')
+plt.title('ROC Curve for Binary Classification')
+plt.legend(loc="lower right")
 plt.show()
+# --- STEP 2 ---
